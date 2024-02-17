@@ -245,7 +245,7 @@ class VCM(object):
 
 if __name__ == '__main__':
     dataset = VCM()
-    
+
     print(dataset.gallery[0][0][0])
 
     # 加载npy文件
