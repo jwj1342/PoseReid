@@ -1,4 +1,4 @@
-from __future__ import print_function, absolute_import
+# from __future__ import print_function, absolute_import
 import os.path as osp
 import numpy as np
 
@@ -19,7 +19,45 @@ def decoder_pic_path(fname):
     return path
 
 
-class VCM(object):
+def _get_names(fpath):
+    """get image name, retuen name list"""
+    names = []
+    with open(fpath, 'r') as f:
+        for line in f:
+            new_line = line.rstrip()
+            names.append(new_line)
+    return names
+
+
+def _get_tracks(fpath):
+    """get tracks file"""
+    names = []
+    with open(fpath, 'r') as f:
+        for line in f:
+            new_line = line.rstrip()
+            new_line.split(' ')
+
+            tmp = new_line.split(' ')[0:]
+            tmp = list(map(int, tmp))
+            names.append(tmp)
+    names = np.array(names)
+    return names
+
+
+def _get_query_idx(fpath):
+    with open(fpath, 'r') as f:
+        for line in f:
+            new_line = line.rstrip()
+            new_line.split(' ')
+            tmp = new_line.split(' ')[0:]
+            tmp = list(map(int, tmp))
+            idxs = tmp
+    idxs = np.array(idxs)
+    print(idxs)
+    return idxs
+
+
+class VCM_Pose(object):
     root = 'data/'  # user
 
     # training data
@@ -34,13 +72,13 @@ class VCM(object):
         self._check_before_run()
 
         # prepare meta data
-        train_names = self._get_names(self.train_name_path)
-        track_train = self._get_tracks(self.track_train_info_path)
+        train_names = _get_names(self.train_name_path)
+        track_train = _get_tracks(self.track_train_info_path)
 
         # for test
-        test_names = self._get_names(self.test_name_path)
-        track_test = self._get_tracks(self.track_test_info_path)  # np.array
-        query_IDX = self._get_query_idx(self.query_IDX_path)  # np.array
+        test_names = _get_names(self.test_name_path)
+        track_test = _get_tracks(self.track_test_info_path)  # np.array
+        query_IDX = _get_query_idx(self.query_IDX_path)  # np.array
         query_IDX -= 1
         track_query = track_test[query_IDX, :]
         print('query')
@@ -51,7 +89,7 @@ class VCM(object):
         print(track_gallery)
 
         # ---------visible to infrared-----------
-        gallery_IDX_1 = self._get_query_idx(self.query_IDX_path)
+        gallery_IDX_1 = _get_query_idx(self.query_IDX_path)
         gallery_IDX_1 -= 1
         track_gallery_1 = track_test[gallery_IDX_1, :]
 
@@ -126,41 +164,6 @@ class VCM(object):
             raise RuntimeError("'{}' is not available".format(self.test_name_path))
         if not osp.exists(self.track_test_info_path):
             raise RuntimeError("'{}' is not available".format(self.track_test_info_path))
-
-    def _get_names(self, fpath):
-        """get image name, retuen name list"""
-        names = []
-        with open(fpath, 'r') as f:
-            for line in f:
-                new_line = line.rstrip()
-                names.append(new_line)
-        return names
-
-    def _get_tracks(self, fpath):
-        """get tracks file"""
-        names = []
-        with open(fpath, 'r') as f:
-            for line in f:
-                new_line = line.rstrip()
-                new_line.split(' ')
-
-                tmp = new_line.split(' ')[0:]
-                tmp = list(map(int, tmp))
-                names.append(tmp)
-        names = np.array(names)
-        return names
-
-    def _get_query_idx(self, fpath):
-        with open(fpath, 'r') as f:
-            for line in f:
-                new_line = line.rstrip()
-                new_line.split(' ')
-                tmp = new_line.split(' ')[0:]
-                tmp = list(map(int, tmp))
-                idxs = tmp
-        idxs = np.array(idxs)
-        print(idxs)
-        return idxs
 
     def _process_data_train(self, names, meta_data, relabel=False, min_seq_len=0):
         num_tracklets = meta_data.shape[0]
@@ -244,7 +247,7 @@ class VCM(object):
 
 
 if __name__ == '__main__':
-    dataset = VCM()
+    dataset = VCM_Pose()
 
     print(dataset.gallery[0][0][0])
 
