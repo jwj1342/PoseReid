@@ -94,8 +94,8 @@ class PoseDataset(Dataset):
                 #     img = self.transform(img)
 
                 imgs_ir.append(img)
-            imgs_ir = torch.cat(imgs_ir, dim=0)
-
+            # imgs_ir = torch.cat(imgs_ir, dim=0)
+            imgs_ir = torch.stack(imgs_ir, dim=0)
             frame_indices = range(num_rgb)
             rand_end = max(0, len(frame_indices) - self.seq_len - 1)
             begin_index = random.randint(0, rand_end)
@@ -121,7 +121,8 @@ class PoseDataset(Dataset):
                 #     img = self.transform(img)
 
                 imgs_rgb.append(img)
-            imgs_rgb = torch.cat(imgs_rgb, dim=0)
+            # imgs_rgb = torch.cat(imgs_rgb, dim=0)
+            imgs_rgb = torch.stack(imgs_rgb, dim=0)
             return imgs_ir, pid_ir, camid_ir, imgs_rgb, pid_rgb, camid_rgb
 
         elif self.sample == 'video_train':
