@@ -2,7 +2,6 @@
 import os.path as osp
 import numpy as np
 
-
 def decoder_pic_path(fname):
     base = fname[0:4]
     modality = fname[5]

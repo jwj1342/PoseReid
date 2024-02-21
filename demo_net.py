@@ -28,6 +28,7 @@ class PoseFeatureNet(nn.Module):
 
 
 if __name__ == '__main__':
+    # 已废弃
     pose_feature_net = PoseFeatureNet(500)
     random_rgb_pose = torch.randn(4, 12, 19, 6)
     random_ir_pose = torch.randn(4, 12, 19, 6)
