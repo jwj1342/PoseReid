@@ -161,7 +161,6 @@ class PoseDataset_train(Dataset):
         else:
             raise KeyError("Unknown sample method: {}. Expected one of {}".format(self.sample, self.sample_methods))
 
-
 class PoseDataset_test(Dataset):
     """Video Person ReID Dataset.
     Note batch data has shape (batch, seq_len, channel, height, width).

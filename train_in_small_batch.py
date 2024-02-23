@@ -25,7 +25,7 @@ if __name__ == '__main__':
     # 提取数据
     saved_batches = []
     for batch_idx, data in enumerate(dataloader):
-        if batch_idx < 10:  # 只保存前2个批次的数据
+        if batch_idx < 50:  # 只保存前2个批次的数据
             saved_batches.append(data)
         else:
             break
