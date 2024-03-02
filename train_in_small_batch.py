@@ -16,7 +16,7 @@ if __name__ == '__main__':
     rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
     sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 8)
     pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='random', transform=None, index1=sampler.index1, index2=sampler.index2)
-    dataloader = DataLoader(pose_dataset, batch_size=8, num_workers=4, drop_last=True)
+    dataloader = DataLoader(pose_dataset, batch_size=8, num_workers=0, drop_last=True)
 
     criterion = nn.CrossEntropyLoss().cuda()
     net = net(500).cuda()

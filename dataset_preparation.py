@@ -5,8 +5,8 @@ import numpy
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
-
+import h5py
+import os
 class PoseDataset_train(Dataset):
     sample_methods = ['evenly', 'random', 'all']
 
@@ -21,6 +21,7 @@ class PoseDataset_train(Dataset):
 
         self.index1 = index1
         self.index2 = index2
+        self.hdf5_file = h5py.File('data/VCM-POSE-HDF5-Train.hdf5', 'r')
 
     def __len__(self):
         return len(self.dataset_rgb)
@@ -87,15 +88,16 @@ class PoseDataset_train(Dataset):
             for index in indices:
                 index = int(index)
                 img_path = img_ir_paths[index]
-                img = np.load(img_path)
-                img = torch.tensor(img)
-                # img = np.array(img)
-                # if self.transform is not None:
-                #     img = self.transform(img)
-
+                img_path = img_path[20:]
+                img_hdf5_key = img_path.replace('/', '_')
+                img = self.hdf5_file[img_hdf5_key][()]
                 imgs_ir.append(img)
             # imgs_ir = torch.cat(imgs_ir, dim=0)
-            imgs_ir = torch.stack(imgs_ir, dim=0)
+            # imgs_ir = torch.stack(imgs_ir, dim=0)
+            imgs_ir_np = np.stack(imgs_ir, axis=0)
+            imgs_ir_tensor = torch.from_numpy(imgs_ir_np).float()
+
+            # ----------------------------------------------------
             frame_indices = range(num_rgb)
             rand_end = max(0, len(frame_indices) - self.seq_len - 1)
             begin_index = random.randint(0, rand_end)
@@ -114,16 +116,15 @@ class PoseDataset_train(Dataset):
             for index in indices:
                 index = int(index)
                 img_path = img_rgb_paths[index]
-                img = np.load(img_path)
-                img = torch.tensor(img)
-                # img = np.array(img)
-                # if self.transform is not None:
-                #     img = self.transform(img)
-
+                img_path = img_path[20:]
+                img_hdf5_key = img_path.replace('/', '_')
+                img = self.hdf5_file[img_hdf5_key][()]
                 imgs_rgb.append(img)
-            # imgs_rgb = torch.cat(imgs_rgb, dim=0)
-            imgs_rgb = torch.stack(imgs_rgb, dim=0)
-            return imgs_ir, pid_ir, camid_ir, imgs_rgb, pid_rgb, camid_rgb
+            imgs_rgb_np = np.stack(imgs_rgb, axis=0)
+            imgs_rgb_tensor = torch.from_numpy(imgs_rgb_np).float()
+            # imgs_rgb = torch.stack(imgs_rgb, dim=0)
+
+            return imgs_ir_tensor, pid_ir, camid_ir, imgs_rgb_tensor, pid_rgb, camid_rgb
 
         elif self.sample == 'video_train':
             idx1 = np.random.choice(sample_clip_ir.shape[1], sample_clip_ir.shape[0])
@@ -173,6 +174,7 @@ class PoseDataset_test(Dataset):
         self.seq_len = seq_len
         self.sample = sample
         self.transform = transform
+        self.hdf5_file = h5py.File('data/VCM-POSE-HDF5-Test.hdf5', 'r')
 
     def __len__(self):
         # 返回数据集中样本的个数
@@ -280,15 +282,21 @@ class PoseDataset_test(Dataset):
             for index in number:
                 index = int(index)
                 img_path = img_paths[index]
-                img = np.load(img_path)
-                img = torch.tensor(img)
+                img_path = img_path[19:]
+                img_hdf5_key = img_path.replace('/', '_')
+                img = self.hdf5_file[img_hdf5_key][()]
+                # img = np.load(img_path)
+                # img = torch.tensor(img)
+                # img = torch.from_numpy(img)
                 # img = np.array(img)
                 # if self.transform is not None:
                 #     img = self.transform(img)
 
                 imgs_ir.append(img)
             # imgs_ir = torch.cat(imgs_ir, dim=0)
-            imgs_ir = torch.stack(imgs_ir, dim=0)
-            return imgs_ir, pid, camid
+            # imgs_ir = torch.stack(imgs_ir, dim=0)
+            imgs_ir_np = np.stack(imgs_ir, axis=0)
+            imgs_ir_tensor = torch.from_numpy(imgs_ir_np).float()
+            return imgs_ir_tensor, pid, camid
         else:
             raise KeyError("Unknown sample method: {}. Expected one of {}".format(self.sample, self.sample_methods))
