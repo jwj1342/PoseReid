@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train, PoseDataset_test
-# from net_lstm import PoseFeatureNet as net
-from net_lstm_withmore import DualStreamPoseNet as net
+from net_lstm import PoseFeatureNet as net
+# from net_lstm_withmore import DualStreamPoseNet as net
 from util import IdentitySampler, evaluate
 import wandb
 
@@ -87,14 +87,14 @@ if __name__ == '__main__':
 
     rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
 
-    sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 128)
+    sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 64)
     index1 = sampler.index1
     index2 = sampler.index2
 
     pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='random', transform=None,
                                      index1=index1, index2=index2)
 
-    dataloader = DataLoader(pose_dataset, batch_size=128, num_workers=0, drop_last=True, sampler=sampler)
+    dataloader = DataLoader(pose_dataset, batch_size=64, num_workers=0, drop_last=True, sampler=sampler)
 
     criterion = nn.CrossEntropyLoss()
     criterion.to('cuda')
@@ -123,21 +123,21 @@ if __name__ == '__main__':
         PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
         batch_size=64, shuffle=False, num_workers=0)
 
-    wandb.init(project="train_pose_LSTM_DualStream",  # track hyperparameters and run metadata
+    wandb.init(project="train_pose_pure_LSTM",  # track hyperparameters and run metadata
                config={
-                   "optimizer": "Adam",
-                   "learning_rate": 0.001,
-                   "architecture": "LSTM DualStream",
+                   "optimizer": "SGD",
+                   "learning_rate": 0.01,
+                   "architecture": "LSTM&FC",
                    "dataset": "VCM-POSE",
-                   "epochs": 81,
+                   "epochs": 111,
                })
     wandb.watch(net, log="all", log_freq=10)
 
-    # optimizer = optim.SGD(net.parameters(), lr=wandb.config.learning_rate, momentum=0.9, weight_decay=5e-4)
-    optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
+    optimizer = optim.SGD(net.parameters(), lr=wandb.config.learning_rate, momentum=0.9, weight_decay=5e-4)
+    # optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
 
     best_mAP = 0
-    load_model(net, "best_model_lstmaddon.pth")
+    # load_model(net, "best_model_LSTMmore.pth")
     for epoch in range(wandb.config.epochs):
         running_loss = 0.0
         start_time = time.time()  # 开始时间
@@ -165,27 +165,20 @@ if __name__ == '__main__':
         wandb.log({"epoch": epoch, "loss": avg_loss})
         print(f"Epoch:{epoch}  Loss:{avg_loss} Time: {end_time - start_time} s")
 
+        # 下面书写保存模型的代码（要求在当两个模态的map任意一个达到新高的时候进行保存，保存时候使用相关信息命名）
+
         if epoch % 10 == 0:
-            save_model(net, "best_model.pth")
             cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
             wandb.log({"epoch": epoch, "mAP_t2v": mAP_t2v})
+            wandb.log({"epoch": epoch, "t2v-Rank-1": cmc_t2v[0]})
+            wandb.log({"epoch": epoch, "t2v-Rank-20": cmc_t2v[4]})
 
             cmc_v2t, mAP_v2t = test_general(galleryloader_1, queryloader_1, net, ngall_1, nquery_1)
             wandb.log({"epoch": epoch, "mAP_v2t": mAP_v2t})
-        # 每个epoch结束后进行测试
-        # start_time = time.time()
-        # cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
-        # end_time = time.time()
-        # print(f"t2v_Test_Time: {end_time - start_time} s")
-        # wandb.log({"epoch": epoch, "mAP_t2v": mAP_t2v})
-        #
-        # start_time = time.time()
-        # cmc_v2t, mAP_v2t = test_general(galleryloader_1, queryloader_1, net, ngall_1, nquery_1)
-        # end_time = time.time()
-        # print(f"v2t_Test_Time: {end_time - start_time} s")
-        # wandb.log({"epoch": epoch, "mAP_v2t": mAP_v2t})
-        # 检查并保存最好的模型
-        # if mAP_v2t > best_mAP:
-        #     best_mAP = mAP_v2t
-        #     save_model(net, "best_model_loss1_map1.pth")
-        #     wandb.log({"best_mAP": best_mAP})
+            wandb.log({"epoch": epoch, "v2t-Rank-1": cmc_v2t[0]})
+            wandb.log({"epoch": epoch, "v2t-Rank-20": cmc_v2t[4]})
+
+            # 下面书写保存模型的代码（要求在当两个模态的map任意一个达到新高的时候进行保存，保存时候使用相关信息命名）
+            if mAP_t2v > best_mAP or mAP_v2t > best_mAP:
+                best_mAP = max(mAP_t2v, mAP_v2t)
+                save_model(net, f"best_model_LSTM_{epoch}_{best_mAP}.pth")

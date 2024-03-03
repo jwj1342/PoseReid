@@ -1,10 +1,12 @@
+from IPython.core.display_functions import clear_output
+from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train
 from demo import GenIdx
-from net_lstm import PoseFeatureNet as net
+from net_lstm_withmore import DualStreamPoseNet as net
 from util import IdentitySampler
 
 if __name__ == '__main__':
@@ -24,6 +26,7 @@ if __name__ == '__main__':
     optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     # 提取数据
     saved_batches = []
+    # losses = []
     for batch_idx, data in enumerate(dataloader):
         if batch_idx < 50:  # 只保存前2个批次的数据
             saved_batches.append(data)
@@ -46,4 +49,11 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
+        # losses.append(total_loss / len(saved_batches))
+        # clear_output(wait=True)  # 清除之前的输出
+        # plt.plot(losses, label='Training Loss')
+        # plt.xlabel('Epoch')
+        # plt.ylabel('Loss')
+        # plt.legend()
+        # plt.show()
         print(f"Epoch: {epoch+1}, Loss: {total_loss/len(saved_batches)}")

@@ -14,14 +14,17 @@ class DualStreamPoseNet(nn.Module):
         self.fc_spatial = nn.Linear(input_dim * num_joints, fc_hidden)
 
         # LSTM for temporal feature extraction
-        self.lstm = nn.LSTM(input_size=input_dim * num_joints, hidden_size=lstm_hidden, num_layers=1, batch_first=True,
+        self.lstm = nn.LSTM(input_size=fc_hidden * num_joints, hidden_size=lstm_hidden, num_layers=1, batch_first=True,
                             bidirectional=True)
+
+        # FC layer before LSTM
+        self.fc_pre_lstm = nn.Linear(input_dim, fc_hidden)
 
         # FC layer after LSTM
         self.fc_temporal = nn.Linear(2 * lstm_hidden, fc_hidden)
 
         # Final FC layer to combine features
-        self.fc_final = nn.Linear(fc_hidden * (seq_len + 1), class_num)  # seq_len spatial features + 1 temporal feature
+        self.fc_final = nn.Linear(2048, class_num)
 
     def forward_feature_extractor(self, pose):
         batch_size, seq_len, num_joints, input_dim = pose.shape
@@ -33,9 +36,12 @@ class DualStreamPoseNet(nn.Module):
                                                  -1)  # Reshape back to [batch_size, seq_len, fc_hidden]
 
         # Extract temporal features
-        temporal_input = pose.view(batch_size, seq_len, -1)  # Flatten each sequence for LSTM input
+        temporal_input = pose.view(-1, input_dim)  # Flatten to [batch_size * seq_len * num_joints, input_dim]
+        temporal_input = self.fc_pre_lstm(temporal_input)
+        temporal_input = temporal_input.view(batch_size, seq_len,
+                                             -1)  # Reshape back to [batch_size, seq_len, self.embed_size]
         temporal_features, _ = self.lstm(temporal_input)  # [batch_size, seq_len, 2 * lstm_hidden]
-        temporal_features = F.relu(self.fc_temporal(temporal_features[:, -1, :]))  # Use only the last hidden state
+        temporal_features = temporal_features[:, -1, :]  # Use only the last hidden state
 
         # Combine spatial and temporal features
         combined_features = torch.cat([spatial_features.view(batch_size, -1), temporal_features],
