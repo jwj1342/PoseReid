@@ -35,13 +35,13 @@ class PoseFeatureNet(nn.Module):
         rgb_feature = self.forward_feature_extractor(rgb_pose)
         ir_feature = self.forward_feature_extractor(ir_pose)
 
-        rgb_feature = self.fc_after_lstm(rgb_feature)
-        ir_feature = self.fc_after_lstm(ir_feature)
+        rgb_feature_cls = self.fc_after_lstm(rgb_feature)
+        ir_feature_cls = self.fc_after_lstm(ir_feature)
 
-        if self.training:
-            return rgb_feature, ir_feature
-        else:
-            return rgb_feature
+        feature_pool = torch.cat((rgb_feature, ir_feature), 0)
+        feature_cls = torch.cat((rgb_feature_cls, ir_feature_cls), 0)
+
+        return feature_pool, feature_cls
 
 
 if __name__ == '__main__':
@@ -52,9 +52,9 @@ if __name__ == '__main__':
     random_rgb_pose = torch.randn(4, 12, 19, 6)
     random_ir_pose = torch.randn(4, 12, 19, 6)
 
-    rgb_feature, ir_feature = pose_feature_net(random_rgb_pose, random_ir_pose)
+    feature_pool, feature_cls = pose_feature_net(random_rgb_pose, random_ir_pose)
     print(pose_feature_net)
-    with SummaryWriter(log_dir='./visual', comment='lstm') as writer:
-        writer.add_graph(pose_feature_net, [random_rgb_pose, random_ir_pose])
+    # with SummaryWriter(log_dir='../visual', comment='lstm') as writer:
+    #     writer.add_graph(pose_feature_net, [random_rgb_pose, random_ir_pose])
 
-    print(rgb_feature.shape, ir_feature.shape)
+    print(feature_pool.shape, feature_cls.shape)

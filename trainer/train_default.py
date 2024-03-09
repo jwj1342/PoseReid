@@ -1,15 +1,13 @@
 import time
-
 import numpy as np
 import torch
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train, PoseDataset_test
-from net_lstm import PoseFeatureNet as net
-# from net_lstm_withmore import DualStreamPoseNet as net
+from net.net_lstm import PoseFeatureNet as net
 from util import IdentitySampler, evaluate
 import wandb
 
@@ -31,7 +29,7 @@ def GenIdx(train_color_label, train_thermal_label):
 
 def extract_features_no_grad(data_loader, feature_dimension, net):
     """提取特征的通用函数"""
-    features = np.zeros((len(data_loader.dataset), feature_dimension))
+    features = np.zeros((2*len(data_loader.dataset), feature_dimension))
     pids = []
     camids = []
     ptr = 0
@@ -81,64 +79,65 @@ def load_model(net, path):
     """加载模型参数"""
     net.load_state_dict(torch.load(path))
 
+# ______________
+pose = VCM_Pose()
+
+rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
+
+sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 64)
+index1 = sampler.index1
+index2 = sampler.index2
+
+pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='video_train', transform=None,
+                                 index1=index1, index2=index2)
+
+dataloader = DataLoader(pose_dataset, batch_size=64, num_workers=0, drop_last=True, sampler=sampler)
+
+criterion_CE = nn.CrossEntropyLoss()
+criterion_CE.to('cuda')
+
+net = net(500)
+net.to('cuda')
+
+nquery_1 = pose.num_query_tracklets_1
+ngall_1 = pose.num_gallery_tracklets_1
+nquery = pose.num_query_tracklets
+ngall = pose.num_gallery_tracklets
+
+queryloader = DataLoader(
+    PoseDataset_test(pose.query, seq_len=12, sample='video_test'),
+    batch_size=64, shuffle=False, num_workers=0)
+
+galleryloader = DataLoader(
+    PoseDataset_test(pose.gallery, seq_len=12, sample='video_test'),
+    batch_size=64, shuffle=False, num_workers=0)
+# ----------------visible to infrared----------------
+queryloader_1 = DataLoader(
+    PoseDataset_test(pose.query_1, seq_len=12, sample='video_test'),
+    batch_size=64, shuffle=False, num_workers=0)
+
+galleryloader_1 = DataLoader(
+    PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
+    batch_size=64, shuffle=False, num_workers=0)
 
 if __name__ == '__main__':
-    pose = VCM_Pose()
 
-    rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
-
-    sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 64)
-    index1 = sampler.index1
-    index2 = sampler.index2
-
-    pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='random', transform=None,
-                                     index1=index1, index2=index2)
-
-    dataloader = DataLoader(pose_dataset, batch_size=64, num_workers=0, drop_last=True, sampler=sampler)
-
-    criterion = nn.CrossEntropyLoss()
-    criterion.to('cuda')
-
-    net = net(500)
-    net.to('cuda')
-
-    nquery_1 = pose.num_query_tracklets_1
-    ngall_1 = pose.num_gallery_tracklets_1
-    nquery = pose.num_query_tracklets
-    ngall = pose.num_gallery_tracklets
-
-    queryloader = DataLoader(
-        PoseDataset_test(pose.query, seq_len=12, sample='video_test'),
-        batch_size=64, shuffle=False, num_workers=0)
-
-    galleryloader = DataLoader(
-        PoseDataset_test(pose.gallery, seq_len=12, sample='video_test'),
-        batch_size=64, shuffle=False, num_workers=0)
-    # ----------------visible to infrared----------------
-    queryloader_1 = DataLoader(
-        PoseDataset_test(pose.query_1, seq_len=12, sample='video_test'),
-        batch_size=64, shuffle=False, num_workers=0)
-
-    galleryloader_1 = DataLoader(
-        PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
-        batch_size=64, shuffle=False, num_workers=0)
-
-    wandb.init(project="train_pose_pure_LSTM",  # track hyperparameters and run metadata
-               config={
-                   "optimizer": "SGD",
-                   "learning_rate": 0.01,
-                   "architecture": "LSTM&FC",
-                   "dataset": "VCM-POSE",
-                   "epochs": 111,
-               })
-    wandb.watch(net, log="all", log_freq=10)
-
-    optimizer = optim.SGD(net.parameters(), lr=wandb.config.learning_rate, momentum=0.9, weight_decay=5e-4)
+    config = {
+        "optimizer": "SGD",
+        "learning_rate": 0.01,
+        "architecture": "LSTM&FC",
+        "dataset": "VCM-POSE",
+        "epochs": 1,
+    }
+    optimizer = optim.SGD(net.parameters(), lr=config["learning_rate"], momentum=0.9, weight_decay=5e-4)
     # optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
 
     best_mAP = 0
     # load_model(net, "best_model_LSTMmore.pth")
-    for epoch in range(wandb.config.epochs):
+    # 创建SummaryWriter
+    writer = SummaryWriter('./visual/LSTM')
+
+    for epoch in range(config["epochs"]):
         running_loss = 0.0
         start_time = time.time()  # 开始时间
         net.train()
@@ -146,12 +145,15 @@ if __name__ == '__main__':
             input_rgb = Variable(imgs_rgb.float().to('cuda'))
             input_ir = Variable(imgs_ir.float().to('cuda'))
 
-            label1 = Variable(pids_rgb.to('cuda'))
-            label2 = Variable(pids_ir.to('cuda'))
+            label1 = pids_rgb
+            label2 = pids_ir
+
+            labels = torch.cat((label1, label2), 0)  # 将两个模态的标签拼接起来，形成一个新的标签
+            labels = Variable(labels.cuda())
 
             rgb_feature, ir_feature = net(input_rgb, input_ir)
 
-            loss = criterion(rgb_feature, label1) + criterion(ir_feature, label2)
+            loss = criterion_CE(rgb_feature, labels)
 
             optimizer.zero_grad()
             loss.backward()
@@ -162,23 +164,21 @@ if __name__ == '__main__':
         end_time = time.time()
 
         avg_loss = running_loss / len(dataloader)
-        wandb.log({"epoch": epoch, "loss": avg_loss})
+        writer.add_scalar('Metrics/loss', avg_loss, epoch)
         print(f"Epoch:{epoch}  Loss:{avg_loss} Time: {end_time - start_time} s")
 
         # 下面书写保存模型的代码（要求在当两个模态的map任意一个达到新高的时候进行保存，保存时候使用相关信息命名）
 
         if epoch % 10 == 0:
             cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
-            wandb.log({"epoch": epoch, "mAP_t2v": mAP_t2v})
-            wandb.log({"epoch": epoch, "t2v-Rank-1": cmc_t2v[0]})
-            wandb.log({"epoch": epoch, "t2v-Rank-20": cmc_t2v[4]})
+            writer.add_scalar('Metrics/mAP_t2v', mAP_t2v, epoch)
+            writer.add_scalar('Metrics/t2v-Rank-1', cmc_t2v[0], epoch)
+            writer.add_scalar('Metrics/t2v-Rank-20', cmc_t2v[4], epoch)
 
             cmc_v2t, mAP_v2t = test_general(galleryloader_1, queryloader_1, net, ngall_1, nquery_1)
-            wandb.log({"epoch": epoch, "mAP_v2t": mAP_v2t})
-            wandb.log({"epoch": epoch, "v2t-Rank-1": cmc_v2t[0]})
-            wandb.log({"epoch": epoch, "v2t-Rank-20": cmc_v2t[4]})
+            writer.add_scalar('Metrics/mAP_v2t', mAP_v2t, epoch)
+            writer.add_scalar('Metrics/v2t-Rank-1', cmc_v2t[0], epoch)
+            writer.add_scalar('Metrics/v2t-Rank-20', cmc_v2t[4], epoch)
 
-            # 下面书写保存模型的代码（要求在当两个模态的map任意一个达到新高的时候进行保存，保存时候使用相关信息命名）
-            if mAP_t2v > best_mAP or mAP_v2t > best_mAP:
-                best_mAP = max(mAP_t2v, mAP_v2t)
-                save_model(net, f"best_model_LSTM_{epoch}_{best_mAP}.pth")
+            # if mAP_t2v + mAP_v2t > best_mAP:
+            #     save_model(net, f"best_model_LSTM_{epoch}_{best_mAP}.pth")

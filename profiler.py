@@ -5,13 +5,11 @@ import torch
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train, PoseDataset_test
 # from net_lstm import PoseFeatureNet as net
-from net_lstm_withmore import DualStreamPoseNet as net
+from net.net_lstm_withmore import DualStreamPoseNet as net
 from util import IdentitySampler, evaluate
-import wandb
 
 
 def GenIdx(train_color_label, train_thermal_label):
@@ -158,7 +156,7 @@ if __name__ == '__main__':
                 print(f"Epoch:{epoch}  Loss:{avg_loss} Time: {end_time - start_time} s")
 
                 if epoch % 10 == 0:
-                    save_model(net, "best_model.pth")
+                    save_model(net, "save_models/best_model.pth")
                     cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
 
                     cmc_v2t, mAP_v2t = test_general(galleryloader_1, queryloader_1, net, ngall_1, nquery_1)

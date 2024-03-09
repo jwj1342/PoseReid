@@ -1,15 +1,14 @@
-import time
-
 import numpy as np
 import torch
 from torch import nn, optim
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from data_manager import VCM_Pose
+
 from dataset_preparation import PoseDataset_train, PoseDataset_test
-from net_lstm import PoseFeatureNet as net
+from torch.utils.data import DataLoader
+from data_manager import VCM_Pose
 from util import IdentitySampler, evaluate
+from net.net_lstm import PoseFeatureNet as net
+
 
 
 def GenIdx(train_color_label, train_thermal_label):
@@ -26,34 +25,58 @@ def GenIdx(train_color_label, train_thermal_label):
         thermal_pos.append(tmp_pos)
     return color_pos, thermal_pos
 
-def extract_features_no_grad(data_loader, feature_dimension, net):
-    """提取特征的通用函数"""
-    features = np.zeros((len(data_loader.dataset), feature_dimension))
-    pids = []
-    camids = []
-    ptr = 0
-    with torch.no_grad():
-        for batch_idx, (imgs, pids_batch, camids_batch) in tqdm(enumerate(data_loader)):
-            input_imgs = Variable(imgs.float().cuda())
-            batch_num = input_imgs.size(0)
-            feats = net(input_imgs, input_imgs)
-            features[ptr:ptr + batch_num, :] = feats.detach().cpu().numpy()
-            ptr += batch_num
-            pids.extend(pids_batch)
-            camids.extend(camids_batch)
-    return features, np.asarray(pids), np.asarray(camids)
-
-
-def test_general(gallery_loader, query_loader, net, ngall, nquery):
+def test():
+    # switch to evaluation mode
     net.eval()
-
     print('Extracting Gallery Feature...')
-    gall_feat, g_pids, g_camids = extract_features_no_grad(gallery_loader, 500, net)
+    ptr = 0
+    gall_feat = np.zeros((ngall, 500))
+    q_pids, q_camids = [], []
+    g_pids, g_camids = [], []
+    with torch.no_grad():
+        for batch_idx, (imgs, pids, camids) in enumerate(galleryloader):
+            input = imgs
+            label = pids
+            batch_num = input.size(0)
 
+            input = Variable(input.float().cuda())
+            feat = net(input, input)
+            gall_feat[ptr:ptr + batch_num, :] = feat.detach().cpu().numpy()
+
+            ptr = ptr + batch_num
+
+            g_pids.extend(pids)
+            g_camids.extend(camids)
+
+    g_pids = np.asarray(g_pids)
+    g_camids = np.asarray(g_camids)
+
+    # switch to evaluation
+    net.eval()
     print('Extracting Query Feature...')
-    query_feat, q_pids, q_camids = extract_features_no_grad(query_loader, 500, net)
+    ptr = 0
+    query_feat = np.zeros((nquery, 500))
 
-    # 计算相似度
+    with torch.no_grad():
+        for batch_idx, (imgs, pids, camids) in enumerate(queryloader):
+            input = imgs
+            label = pids
+
+            batch_num = input.size(0)
+
+            input = Variable(input.float().cuda())
+            feat = net(input, input)
+            query_feat[ptr:ptr + batch_num, :] = feat.detach().cpu().numpy()
+
+            ptr = ptr + batch_num
+
+            q_pids.extend(pids)
+            q_camids.extend(camids)
+
+    q_pids = np.asarray(q_pids)
+    q_camids = np.asarray(q_camids)
+
+    # compute the similarity
     distmat = np.matmul(query_feat, np.transpose(gall_feat))
 
     print("Computing CMC and mAP")
@@ -68,20 +91,85 @@ def test_general(gallery_loader, query_loader, net, ngall, nquery):
     print("------------------")
     return cmc, mAP
 
+def test1():
+    # switch to evaluation mode
+    net.eval()
+    print('Extracting Gallery Feature...')
+    ptr = 0
+    gall_feat = np.zeros((ngall, 500))
+    q_pids, q_camids = [], []
+    g_pids, g_camids = [], []
+    with torch.no_grad():
+        for batch_idx, (imgs, pids, camids) in enumerate(galleryloader_1):
+            input = imgs
+            label = pids
+            batch_num = input.size(0)
+
+            input = Variable(input.float().cuda())
+            feat = net(input, input)
+            gall_feat[ptr:ptr + batch_num, :] = feat.detach().cpu().numpy()
+
+            ptr = ptr + batch_num
+
+            g_pids.extend(pids)
+            g_camids.extend(camids)
+
+    g_pids = np.asarray(g_pids)
+    g_camids = np.asarray(g_camids)
+
+    # switch to evaluation
+    net.eval()
+    print('Extracting Query Feature...')
+    ptr = 0
+    query_feat = np.zeros((nquery, 500))
+
+    with torch.no_grad():
+        for batch_idx, (imgs, pids, camids) in enumerate(queryloader_1):
+            input = imgs
+            label = pids
+
+            batch_num = input.size(0)
+
+            input = Variable(input.float().cuda())
+            feat = net(input, input)
+            query_feat[ptr:ptr + batch_num, :] = feat.detach().cpu().numpy()
+
+            ptr = ptr + batch_num
+
+            q_pids.extend(pids)
+            q_camids.extend(camids)
+
+    q_pids = np.asarray(q_pids)
+    q_camids = np.asarray(q_camids)
+
+    # compute the similarity
+    distmat = np.matmul(query_feat, np.transpose(gall_feat))
+
+    print("Computing CMC and mAP")
+    cmc, mAP = evaluate(-distmat, q_pids, g_pids, q_camids, g_camids)
+
+    ranks = [1, 5, 10, 20]
+    print("Results ----------")
+    print("testmAP: {:.1%}".format(mAP))
+    print("CMC curve")
+    for r in ranks:
+        print("Rank-{:<3}: {:.1%}".format(r, cmc[r - 1]))
+    print("------------------")
+    return cmc, mAP
 
 if __name__ == '__main__':
     pose = VCM_Pose()
 
     rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
 
-    sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 32)
+    sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 8)
     index1 = sampler.index1
     index2 = sampler.index2
 
     pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='random', transform=None,
                                      index1=index1, index2=index2)
 
-    dataloader = DataLoader(pose_dataset, batch_size=32, num_workers=4, drop_last=True, sampler=sampler)
+    dataloader = DataLoader(pose_dataset, batch_size=8, num_workers=16, drop_last=True, sampler=sampler)
 
     criterion = nn.CrossEntropyLoss()
     criterion.to('cuda')
@@ -96,21 +184,21 @@ if __name__ == '__main__':
 
     queryloader = DataLoader(
         PoseDataset_test(pose.query, seq_len=12, sample='video_test'),
-        batch_size=32, shuffle=False, num_workers=4)
+        batch_size=32, shuffle=False, num_workers=16)
 
     galleryloader = DataLoader(
         PoseDataset_test(pose.gallery, seq_len=12, sample='video_test'),
-        batch_size=32, shuffle=False, num_workers=4)
+        batch_size=32, shuffle=False, num_workers=16)
     # ----------------visible to infrared----------------
     queryloader_1 = DataLoader(
         PoseDataset_test(pose.query_1, seq_len=12, sample='video_test'),
-        batch_size=32, shuffle=False, num_workers=4)
+        batch_size=32, shuffle=False, num_workers=16)
 
     galleryloader_1 = DataLoader(
         PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
-        batch_size=32, shuffle=False, num_workers=4)
+        batch_size=32, shuffle=False, num_workers=16)
     # optimizer = optim.Adam(net.parameters(), lr=0.01, weight_decay=5e-4)
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9, weight_decay=5e-4)
 
     for batch_idx, (imgs_ir, pids_ir, camid_ir, imgs_rgb, pids_rgb, camid_rgb) in enumerate(dataloader):
         print("--------------------------------------------------------------------------------")
@@ -149,18 +237,13 @@ if __name__ == '__main__':
         optimizer.step()
 
         # print("--------------------------------------------------------------------------------")
-    start_time = time.time()
-    cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
-    end_time = time.time()
-    print(f"t2v_Test_Time: {end_time - start_time} s")
+
+    cmc, mAP = test()
     print(
         'FC(t2v):   Rank-1: {:.2%} | Rank-5: {:.2%} | Rank-10: {:.2%}| Rank-20: {:.2%}| mAP: {:.2%}'.format(
-            cmc_t2v[0], cmc_t2v[4], cmc_t2v[9], cmc_t2v[19], mAP_t2v))
+            cmc[0], cmc[4], cmc[9], cmc[19], mAP))
 
-    start_time = time.time()
-    cmc_v2t, mAP_v2t = test_general(galleryloader_1, queryloader_1, net, ngall_1, nquery_1)
-    end_time = time.time()
-    print(f"v2t_Test_Time: {end_time - start_time} s")
+    cmc, mAP = test1()
     print(
         'FC(v2t):   Rank-1: {:.2%} | Rank-5: {:.2%} | Rank-10: {:.2%}| Rank-20: {:.2%}| mAP: {:.2%}'.format(
-            cmc_v2t[0], cmc_v2t[4], cmc_v2t[9], cmc_v2t[19], mAP_v2t))
+            cmc[0], cmc[4], cmc[9], cmc[19], mAP))

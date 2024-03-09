@@ -1,12 +1,12 @@
-from IPython.core.display_functions import clear_output
-from matplotlib import pyplot as plt
+import torch
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train
 from demo import GenIdx
-from net_lstm_withmore import DualStreamPoseNet as net
+# from net_lstm_withmore import DualStreamPoseNet as net
+from net.EnhancedLstm import PoseFeatureNet as net
 from util import IdentitySampler
 
 if __name__ == '__main__':
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss().cuda()
     net = net(500).cuda()
     # optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.09, weight_decay=5e-4)
     # 提取数据
     saved_batches = []
     # losses = []
@@ -43,8 +43,11 @@ if __name__ == '__main__':
             input_ir = Variable(imgs_ir.cuda().float())
             label1 = Variable(pids_rgb.cuda())
             label2 = Variable(pids_ir.cuda())
-            rgb_feature, ir_feature = net(input_rgb, input_ir)
-            loss = criterion(rgb_feature, label1) + criterion(ir_feature, label2)
+            feature, feature_cls = net(input_rgb, input_ir)
+            # loss = criterion(rgb_feature, label1) + criterion(ir_feature, label2)
+            label = torch.cat((pids_rgb, pids_ir), 0)
+            labels = Variable(label.cuda())
+            loss = criterion(feature_cls, label)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
