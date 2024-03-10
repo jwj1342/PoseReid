@@ -52,7 +52,7 @@ def _get_query_idx(fpath):
             tmp = list(map(int, tmp))
             idxs = tmp
     idxs = np.array(idxs)
-    print(idxs)
+    # print(idxs)
     return idxs
 
 
@@ -80,12 +80,12 @@ class VCM_Pose(object):
         query_IDX = _get_query_idx(self.query_IDX_path)  # np.array
         query_IDX -= 1
         track_query = track_test[query_IDX, :]
-        print('query')
-        print(track_query)
+        # print('query')
+        # print(track_query)
         gallery_IDX = [i for i in range(track_test.shape[0]) if i not in query_IDX]
         track_gallery = track_test[gallery_IDX, :]
-        print('gallery')
-        print(track_gallery)
+        # print('gallery')
+        # print(track_gallery)
 
         # ---------visible to infrared-----------
         gallery_IDX_1 = _get_query_idx(self.query_IDX_path)
@@ -112,18 +112,18 @@ class VCM_Pose(object):
             self._process_data_test(test_names, track_gallery_1, relabel=False, min_seq_len=min_seq_len)
         # ---------------------------------------
 
-        print("=> VCM loaded")
-        print("Dataset statistics:")
-        print("---------------------------------")
-        print("subset      | # ids | # tracklets")
-        print("---------------------------------")
-        print("train_ir    | {:5d} | {:8d}".format(num_train_pids, num_train_tracklets_ir))
-        print("train_rgb   | {:5d} | {:8d}".format(num_train_pids, num_train_tracklets_rgb))
-        print("query       | {:5d} | {:8d}".format(num_query_pids, num_query_tracklets))
-        print("gallery     | {:5d} | {:8d}".format(num_gallery_pids, num_gallery_tracklets))
-        print("---------------------------------")
-        print("ir_label    | {}".format(np.unique(ir_label)))
-        print("rgb_label   | {}".format(np.unique(rgb_label)))
+        # print("=> VCM loaded")
+        # print("Dataset statistics:")
+        # print("---------------------------------")
+        # print("subset      | # ids | # tracklets")
+        # print("---------------------------------")
+        # print("train_ir    | {:5d} | {:8d}".format(num_train_pids, num_train_tracklets_ir))
+        # print("train_rgb   | {:5d} | {:8d}".format(num_train_pids, num_train_tracklets_rgb))
+        # print("query       | {:5d} | {:8d}".format(num_query_pids, num_query_tracklets))
+        # print("gallery     | {:5d} | {:8d}".format(num_gallery_pids, num_gallery_tracklets))
+        # print("---------------------------------")
+        # print("ir_label    | {}".format(np.unique(ir_label)))
+        # print("rgb_label   | {}".format(np.unique(rgb_label)))
 
         self.train_ir = train_ir
         self.train_rgb = train_rgb
@@ -171,9 +171,9 @@ class VCM_Pose(object):
 
         # dict {pid : label}
         if relabel: pid2label = {pid: label for label, pid in enumerate(pid_list)}
-        print('pid_list')
-        print(pid_list)
-        print(pid2label)
+        # print('pid_list')
+        # print(pid_list)
+        # print(pid2label)
         tracklets_ir = []
         num_imgs_per_tracklet_ir = []
         ir_label = []

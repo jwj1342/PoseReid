@@ -3,3 +3,8 @@
 /wandb/
 /visual/
 /*.pth
+/visual/
+/data/change_posedata_HDF5.py
+/data/change_posedata_HDF51.py
+/data/VCM-POSE-HDF5-Test.hdf5
+/data/VCM-POSE-HDF5-Train.hdf5

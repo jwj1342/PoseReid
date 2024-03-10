@@ -19,6 +19,8 @@ class PoseFeatureNet(nn.Module):
 
         self.fc_after_lstm = nn.Linear(2 * lstm_hidden, class_num)
 
+        self.classifier = nn.Linear(1024, class_num, bias=False)
+
     def forward_feature_extractor(self, pose):
         batch_size, seq_len, num_joints, input_dim = pose.shape
 
@@ -35,13 +37,10 @@ class PoseFeatureNet(nn.Module):
         rgb_feature = self.forward_feature_extractor(rgb_pose)
         ir_feature = self.forward_feature_extractor(ir_pose)
 
-        rgb_feature_cls = self.fc_after_lstm(rgb_feature)
-        ir_feature_cls = self.fc_after_lstm(ir_feature)
+        concat_feature = torch.cat((rgb_feature, ir_feature), 1)
+        feature_cls = self.classifier(concat_feature)
 
-        feature_pool = torch.cat((rgb_feature, ir_feature), 0)
-        feature_cls = torch.cat((rgb_feature_cls, ir_feature_cls), 0)
-
-        return feature_pool, feature_cls
+        return concat_feature, feature_cls
 
 
 if __name__ == '__main__':

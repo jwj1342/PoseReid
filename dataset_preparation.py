@@ -90,7 +90,7 @@ class PoseDataset_train(Dataset):
             for index in indices:
                 index = int(index)
                 img_path = img_ir_paths[index]
-                img_path = img_path[20:]
+                img_path = img_path[15:]
                 img_hdf5_key = img_path.replace('/', '_')
                 img = hdf5_file[img_hdf5_key][()]
                 imgs_ir.append(img)
@@ -118,7 +118,7 @@ class PoseDataset_train(Dataset):
             for index in indices:
                 index = int(index)
                 img_path = img_rgb_paths[index]
-                img_path = img_path[20:]
+                img_path = img_path[15:]
                 img_hdf5_key = img_path.replace('/', '_')
                 img = hdf5_file[img_hdf5_key][()]
                 imgs_rgb.append(img)
