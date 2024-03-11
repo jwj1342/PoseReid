@@ -8,7 +8,6 @@ from dataset_preparation import PoseDataset_train, PoseDataset_test
 from net.net_lstm import PoseFeatureNet as net
 from util import IdentitySampler, GenIdx, test_general
 
-# ______________
 pose = VCM_Pose()
 
 rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
@@ -21,7 +20,7 @@ index2 = sampler.index2
 pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='video_train', transform=None,
                                  index1=index1, index2=index2)
 
-dataloader = DataLoader(pose_dataset, batch_size=32*num_pos, num_workers=8, drop_last=True, sampler=sampler)
+dataloader = DataLoader(pose_dataset, batch_size=32*num_pos, num_workers=1, drop_last=True, sampler=sampler)
 
 criterion_CE = nn.CrossEntropyLoss()
 criterion_CE.to('cuda')
@@ -36,19 +35,19 @@ ngall = pose.num_gallery_tracklets
 
 queryloader = DataLoader(
     PoseDataset_test(pose.query, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=4)
+    batch_size=32, shuffle=False, num_workers=1)
 
 galleryloader = DataLoader(
     PoseDataset_test(pose.gallery, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=4)
+    batch_size=32, shuffle=False, num_workers=1)
 # ----------------visible to infrared----------------
 queryloader_1 = DataLoader(
     PoseDataset_test(pose.query_1, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=4)
+    batch_size=32, shuffle=False, num_workers=1)
 
 galleryloader_1 = DataLoader(
     PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=4)
+    batch_size=32, shuffle=False, num_workers=1)
 
 if __name__ == '__main__':
 
@@ -65,7 +64,7 @@ if __name__ == '__main__':
     best_mAP = 0
     # load_model(net, "best_model_LSTMmore.pth")
     # 创建SummaryWriter
-    writer = SummaryWriter('../visual/LSTM')
+    writer = SummaryWriter('../visual/LSTM-SelfAttention-FC')
 
     for epoch in range(config["epochs"]):
         running_loss = 0.0

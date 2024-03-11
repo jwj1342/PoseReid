@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-from torch.utils.tensorboard import SummaryWriter
-
 
 class PoseFeatureNet(nn.Module):
     def __init__(self, class_num, input_dim=6, seq_len=12, num_joints=19, lstm_hidden=256, fc_hidden=128):
@@ -24,7 +22,6 @@ class PoseFeatureNet(nn.Module):
     def forward_feature_extractor(self, pose):
         batch_size, seq_len, num_joints, input_dim = pose.shape
 
-        # Reshape to process each joint feature vector through the FC layer
         pose = pose.view(-1, input_dim)  # Flatten to [batch_size * seq_len * num_joints, input_dim]
         pose = self.fc_pre_lstm(pose)  # Pass through FC layer
         pose = pose.view(batch_size, seq_len, -1)  # Reshape back to [batch_size, seq_len, self.embed_size]
