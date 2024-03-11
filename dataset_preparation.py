@@ -36,7 +36,7 @@ class PoseDataset_train(Dataset):
 
         S = self.seq_len  # 这个地方的S是指的seq_len
 
-        hdf5_file = h5py.File('../data/VCM-POSE-HDF5-Train.hdf5', 'r')
+        hdf5_file = h5py.File('data/VCM-POSE-HDF5-Train.hdf5', 'r')
 
         sample_clip_ir = []
         frame_indices_ir = list(range(num_ir))
@@ -135,7 +135,7 @@ class PoseDataset_train(Dataset):
             for index in number_ir:
                 index = int(index)
                 img_path = img_ir_paths[index]
-                img_path = img_path[23:]
+                img_path = img_path[22:]
                 img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
                 img = hdf5_file[img_hdf5_key][()]
                 imgs_ir.append(img)
@@ -148,7 +148,7 @@ class PoseDataset_train(Dataset):
             for index in number_rgb:
                 index = int(index)
                 img_path = img_rgb_paths[index]
-                img_path = img_path[23:]
+                img_path = img_path[22:]
                 img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
                 img = hdf5_file[img_hdf5_key][()]
                 imgs_rgb.append(img)
@@ -186,7 +186,7 @@ class PoseDataset_test(Dataset):
         sample_clip_ir = []
         frame_indices_ir = list(range(num))
 
-        hdf5_file = h5py.File('../data/VCM-POSE-HDF5-Test.hdf5', 'r')
+        hdf5_file = h5py.File('data/VCM-POSE-HDF5-Test.hdf5', 'r')
 
         if num < S:
             strip_ir = list(range(num)) + [frame_indices_ir[-1]] * (S - num)
@@ -281,7 +281,7 @@ class PoseDataset_test(Dataset):
             for index in number:
                 index = int(index)
                 img_path = img_paths[index]
-                img_path = img_path[22:]
+                img_path = img_path[21:]
                 img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
                 img = hdf5_file[img_hdf5_key][()]
                 # img = np.load(img_path)

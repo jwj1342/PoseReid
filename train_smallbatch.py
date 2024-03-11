@@ -1,12 +1,15 @@
+import sys
 import torch
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+# sys.path.append("..")
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train
-from demo import GenIdx
-from net.net_lstm import PoseFeatureNet as net
+from util import GenIdx, save_model
+from net.net_attention import PoseFeatureNet as net
 from util import IdentitySampler
+
 
 if __name__ == '__main__':
     """这个文件是为了验证网络是否能够正常训练
@@ -17,23 +20,23 @@ if __name__ == '__main__':
     rgb_pos, ir_pos = GenIdx(pose.rgb_label, pose.ir_label)
     sampler = IdentitySampler(pose.ir_label, pose.rgb_label, rgb_pos, ir_pos, 2, 8)
     pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='video_train', transform=None, index1=sampler.index1, index2=sampler.index2)
-    dataloader = DataLoader(pose_dataset, batch_size=8, num_workers=16, drop_last=True)
+    dataloader = DataLoader(pose_dataset, batch_size=64, num_workers=16, drop_last=True)
 
     criterion = nn.CrossEntropyLoss().cuda()
     net = net(500).cuda()
-    # optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.09, weight_decay=5e-4)
+    # optimizer = optim.Adam(net.parameters(), lr=0.01, weight_decay=5e-4)
+    optimizer = optim.SGD(net.parameters(), lr=0.02, momentum=0.09, weight_decay=5e-4)
     # 提取数据
     saved_batches = []
     # losses = []
     for batch_idx, data in enumerate(dataloader):
-        if batch_idx < 50:  # 只保存前2个批次的数据
+        if batch_idx < 50:  # 只保存前n批次的数据
             saved_batches.append(data)
         else:
             break
 
     # 重复学习
-    num_epochs = 500  # 重复训练的轮数
+    num_epochs = 80  # 重复训练的轮数
     for epoch in range(num_epochs):
         total_loss = 0
         for data in saved_batches:
@@ -55,3 +58,4 @@ if __name__ == '__main__':
 
             total_loss += loss.item()
         print(f"Epoch: {epoch+1}, Loss: {total_loss/len(saved_batches)}")
+    save_model(net, "starter_model.pth")

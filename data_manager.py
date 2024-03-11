@@ -57,7 +57,7 @@ def _get_query_idx(fpath):
 
 
 class VCM_Pose(object):
-    root = '../data/'  # user
+    root = './data/'  # user
 
     # training data
     train_name_path = osp.join(root, 'info/train_name.txt')

@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train, PoseDataset_test
-from net.net_lstm import PoseFeatureNet as net
-from util import IdentitySampler, GenIdx, test_general
+from net.net_attention import PoseFeatureNet as net
+from util import IdentitySampler, GenIdx, load_model, save_model, test_general
 
 pose = VCM_Pose()
 
@@ -20,7 +20,7 @@ index2 = sampler.index2
 pose_dataset = PoseDataset_train(pose.train_ir, pose.train_rgb, seq_len=12, sample='video_train', transform=None,
                                  index1=index1, index2=index2)
 
-dataloader = DataLoader(pose_dataset, batch_size=32*num_pos, num_workers=1, drop_last=True, sampler=sampler)
+dataloader = DataLoader(pose_dataset, batch_size=64*num_pos, num_workers=12, drop_last=True, sampler=sampler)
 
 criterion_CE = nn.CrossEntropyLoss()
 criterion_CE.to('cuda')
@@ -35,36 +35,42 @@ ngall = pose.num_gallery_tracklets
 
 queryloader = DataLoader(
     PoseDataset_test(pose.query, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=1)
+    batch_size=32, shuffle=False, num_workers=12)
 
 galleryloader = DataLoader(
     PoseDataset_test(pose.gallery, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=1)
+    batch_size=32, shuffle=False, num_workers=12)
 # ----------------visible to infrared----------------
 queryloader_1 = DataLoader(
     PoseDataset_test(pose.query_1, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=1)
+    batch_size=32, shuffle=False, num_workers=12)
 
 galleryloader_1 = DataLoader(
     PoseDataset_test(pose.gallery_1, seq_len=12, sample='video_test'),
-    batch_size=32, shuffle=False, num_workers=1)
+    batch_size=32, shuffle=False, num_workers=12)
 
 if __name__ == '__main__':
 
     config = {
         "optimizer": "SGD",
-        "learning_rate": 0.01,
+        "learning_rate": 0.001,
         "architecture": "LSTM&FC",
         "dataset": "VCM-POSE",
-        "epochs": 10,
+        "epochs": 91,
+        "momentum":0.9,
+        "name":'test'
     }
-    optimizer = optim.SGD(net.parameters(), lr=config["learning_rate"], momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(
+        net.parameters(), 
+        lr=config["learning_rate"], 
+        momentum=config["learning_rate"], 
+        weight_decay=5e-4)
     # optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=5e-4)
 
     best_mAP = 0
-    # load_model(net, "best_model_LSTMmore.pth")
+    load_model(net, "starter_model.pth")
     # 创建SummaryWriter
-    writer = SummaryWriter('../visual/LSTM-SelfAttention-FC')
+    writer = SummaryWriter(config["name"])
 
     for epoch in range(config["epochs"]):
         running_loss = 0.0
@@ -96,7 +102,7 @@ if __name__ == '__main__':
 
         # 下面书写保存模型的代码（要求在当两个模态的map任意一个达到新高的时候进行保存，保存时候使用相关信息命名）
 
-        if epoch % 10 == 0 and epoch != 0:
+        if epoch % 5 == 0 and epoch != 0:
             cmc_t2v, mAP_t2v = test_general(galleryloader, queryloader, net, ngall, nquery)
             writer.add_scalar('Metrics/mAP_t2v', mAP_t2v, epoch)
             writer.add_scalar('Metrics/t2v-Rank-1', cmc_t2v[0], epoch)
@@ -107,5 +113,5 @@ if __name__ == '__main__':
             writer.add_scalar('Metrics/v2t-Rank-1', cmc_v2t[0], epoch)
             writer.add_scalar('Metrics/v2t-Rank-20', cmc_v2t[4], epoch)
 
-            # if mAP_t2v + mAP_v2t > best_mAP:
-            #     save_model(net, f"best_model_LSTM_{epoch}_{best_mAP}.pth")
+            if mAP_t2v + mAP_v2t > best_mAP:
+                save_model(net, f"best_model_LSTM_attention_{epoch}_{best_mAP}.pth")
