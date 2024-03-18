@@ -155,7 +155,7 @@ def extract_features_no_grad(data_loader, feature_dimension, net):
         for batch_idx, (imgs, pids_batch, camids_batch) in enumerate(data_loader):
             input_imgs = Variable(imgs.float().cuda())
             batch_num = input_imgs.size(0)
-            feature_pool, feature_cls = net(input_imgs, input_imgs)
+            feature_pool, feature_cls = net(input_imgs, input_imgs,  modal=1)
             features[ptr:ptr + batch_num, :] = feature_cls.detach().cpu().numpy()
             ptr += batch_num
             pids.extend(pids_batch)

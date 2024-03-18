@@ -36,7 +36,7 @@ class PoseDataset_train(Dataset):
 
         S = self.seq_len  # 这个地方的S是指的seq_len
 
-        hdf5_file = h5py.File('data/VCM-POSE-HDF5-Train.hdf5', 'r')
+        hdf5_file = h5py.File('data/dataset-train.h5', 'r')
 
         sample_clip_ir = []
         frame_indices_ir = list(range(num_ir))
@@ -136,8 +136,8 @@ class PoseDataset_train(Dataset):
                 index = int(index)
                 img_path = img_ir_paths[index]
                 img_path = img_path[22:]
-                img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
-                img = hdf5_file[img_hdf5_key][()]
+                img_hdf5_key = img_path.replace('.jpg', '').split('/', -1 )
+                img = hdf5_file[img_hdf5_key[0]][img_hdf5_key[1]][img_hdf5_key[2]][img_hdf5_key[3]][()]
                 imgs_ir.append(img)
             imgs_ir_np = np.stack(imgs_ir, axis=0)
             imgs_ir_tensor = torch.from_numpy(imgs_ir_np).float()
@@ -149,8 +149,11 @@ class PoseDataset_train(Dataset):
                 index = int(index)
                 img_path = img_rgb_paths[index]
                 img_path = img_path[22:]
-                img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
-                img = hdf5_file[img_hdf5_key][()]
+                # img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
+                # img = hdf5_file[img_hdf5_key][()]
+                img_hdf5_key = img_path.replace('.jpg', '').split('/', -1 )
+                img = hdf5_file[img_hdf5_key[0]][img_hdf5_key[1]][img_hdf5_key[2]][img_hdf5_key[3]][()]
+                
                 imgs_rgb.append(img)
             imgs_rgb_np = np.stack(imgs_rgb, axis=0)
             imgs_rgb_tensor = torch.from_numpy(imgs_rgb_np).float()
@@ -171,7 +174,7 @@ class PoseDataset_test(Dataset):
         self.seq_len = seq_len
         self.sample = sample
         self.transform = transform
-        # self.hdf5_file = h5py.File('data/VCM-POSE-HDF5-Test.hdf5', 'r')
+        # self.hdf5_file = h5py.File('data/dataset-test.h5', 'r')
 
     def __len__(self):
         # 返回数据集中样本的个数
@@ -186,7 +189,7 @@ class PoseDataset_test(Dataset):
         sample_clip_ir = []
         frame_indices_ir = list(range(num))
 
-        hdf5_file = h5py.File('data/VCM-POSE-HDF5-Test.hdf5', 'r')
+        hdf5_file = h5py.File('data/dataset-test.h5', 'r')
 
         if num < S:
             strip_ir = list(range(num)) + [frame_indices_ir[-1]] * (S - num)
@@ -282,8 +285,8 @@ class PoseDataset_test(Dataset):
                 index = int(index)
                 img_path = img_paths[index]
                 img_path = img_path[21:]
-                img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
-                img = hdf5_file[img_hdf5_key][()]
+                img_hdf5_key = img_path.replace('.jpg', '').split('/', -1)
+                img = hdf5_file[img_hdf5_key[0]][img_hdf5_key[1]][img_hdf5_key[2]][img_hdf5_key[3]][()]
                 # img = np.load(img_path)
                 # img = torch.tensor(img)
                 # img = torch.from_numpy(img)
