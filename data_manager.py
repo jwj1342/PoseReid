@@ -57,7 +57,7 @@ def _get_query_idx(fpath):
 
 
 class VCM_Pose(object):
-    root = '../data/'  # user
+    root = './data/'  # user
 
     # training data
     train_name_path = osp.join(root, 'info/train_name.txt')
@@ -189,7 +189,7 @@ class VCM_Pose(object):
 
             if m == 1:
                 img_names = names[start_index - 1:end_index]
-                img_names = [filename[:-4] + ".npy" for filename in img_names]
+                # img_names = [filename[:-4] + ".npy" for filename in img_names]
                 pose_paths = osp.join(self.root, 'VCM-POSE/train')
                 img_ir_paths = [osp.join(pose_paths, decoder_pic_path(img_name)) for img_name in img_names]
                 if len(img_ir_paths) >= min_seq_len:
@@ -200,7 +200,7 @@ class VCM_Pose(object):
                     num_imgs_per_tracklet_ir.append(len(img_ir_paths))
             else:
                 img_names = names[start_index - 1:end_index]
-                img_names = [filename[:-4] + ".npy" for filename in img_names]
+                # img_names = [filename[:-4] + ".npy" for filename in img_names]
                 pose_paths = osp.join(self.root, 'VCM-POSE/train')
                 img_rgb_paths = [osp.join(pose_paths, decoder_pic_path(img_name)) for img_name in img_names]
                 if len(img_rgb_paths) >= min_seq_len:
@@ -232,7 +232,7 @@ class VCM_Pose(object):
             if relabel: pid = pid2label[pid]
 
             img_names = names[start_index - 1:end_index]
-            img_names = [filename[:-4] + ".npy" for filename in img_names]
+            # img_names = [filename[:-4] + ".npy" for filename in img_names]
             pose_paths = osp.join(self.root, 'VCM-POSE/test')
             img_paths = [osp.join(pose_paths, decoder_pic_path(img_name)) for img_name in img_names]
             if len(img_paths) >= min_seq_len:

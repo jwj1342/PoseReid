@@ -2,7 +2,19 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from torch.utils.data import Sampler
+def GenIdx(train_color_label, train_thermal_label):
+    color_pos = []
+    unique_label_color = np.unique(train_color_label)
+    for i in range(len(unique_label_color)):
+        tmp_pos = [k for k, v in enumerate(train_color_label) if v == unique_label_color[i]]
+        color_pos.append(tmp_pos)
 
+    thermal_pos = []
+    unique_label_thermal = np.unique(train_thermal_label)
+    for i in range(len(unique_label_thermal)):
+        tmp_pos = [k for k, v in enumerate(train_thermal_label) if v == unique_label_thermal[i]]
+        thermal_pos.append(tmp_pos)
+    return color_pos, thermal_pos
 
 class IdentitySampler(Sampler):
     """Sample person identities evenly in each batch.
@@ -143,7 +155,7 @@ def extract_features_no_grad(data_loader, feature_dimension, net):
         for batch_idx, (imgs, pids_batch, camids_batch) in enumerate(data_loader):
             input_imgs = Variable(imgs.float().cuda())
             batch_num = input_imgs.size(0)
-            feature_pool, feature_cls = net(input_imgs, input_imgs)
+            feature_pool, feature_cls = net(input_imgs, input_imgs,  modal=1)
             features[ptr:ptr + batch_num, :] = feature_cls.detach().cpu().numpy()
             ptr += batch_num
             pids.extend(pids_batch)

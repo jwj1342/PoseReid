@@ -17,6 +17,7 @@ class SelfAttention(nn.Module):
         self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        
         self.fc_out = nn.Linear(heads * self.head_dim, embed_size)
 
     def forward(self, value, key, query):
@@ -50,8 +51,7 @@ class PoseFeatureNet(nn.Module):
         self.self_attention = SelfAttention(fc_hidden, heads)
         self.embed_size = fc_hidden * num_joints
 
-        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=lstm_hidden, num_layers=1, batch_first=True,
-                            bidirectional=True)
+        self.lstm = nn.LSTM(input_size=self.embed_size, hidden_size=lstm_hidden, num_layers=1, batch_first=True, bidirectional=True)
 
         self.fc_after_lstm = nn.Linear(2 * lstm_hidden, class_num)
         self.classifier = nn.Linear(1024, class_num, bias=False)
