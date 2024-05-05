@@ -149,11 +149,8 @@ class PoseDataset_train(Dataset):
                 index = int(index)
                 img_path = img_rgb_paths[index]
                 img_path = img_path[22:]
-                # img_hdf5_key = img_path.replace('/', '_').replace('.jpg', '.npy')
-                # img = hdf5_file[img_hdf5_key][()]
-                img_hdf5_key = img_path.replace('.jpg', '').split('/', -1 )
+                img_hdf5_key = img_path.replace('.jpg', '').split('/', -1)
                 img = hdf5_file[img_hdf5_key[0]][img_hdf5_key[1]][img_hdf5_key[2]][img_hdf5_key[3]][()]
-                
                 imgs_rgb.append(img)
             imgs_rgb_np = np.stack(imgs_rgb, axis=0)
             imgs_rgb_tensor = torch.from_numpy(imgs_rgb_np).float()
@@ -174,7 +171,7 @@ class PoseDataset_test(Dataset):
         self.seq_len = seq_len
         self.sample = sample
         self.transform = transform
-        # self.hdf5_file = h5py.File('data/dataset-test.h5', 'r')
+        # self.hdf5_file = h5py.File('data/VCM-POSE-HDF5-Test.hdf5', 'r')
 
     def __len__(self):
         # 返回数据集中样本的个数

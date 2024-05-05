@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from data_manager import VCM_Pose
 from dataset_preparation import PoseDataset_train, PoseDataset_test
 # from net_lstm import PoseFeatureNet as net
-from net.net_lstm_withmore import DualStreamPoseNet as net
+from net.selfconstruct.net_lstm_withmore import DualStreamPoseNet as net
 from util import IdentitySampler, evaluate
 
 

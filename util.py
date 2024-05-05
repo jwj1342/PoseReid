@@ -77,6 +77,7 @@ class IdentitySampler(Sampler):
     def __len__(self):
         return self.N
 
+
 def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=20):
     # print("it is evaluate ing now ")
     num_q, num_g = distmat.shape
@@ -153,9 +154,9 @@ def extract_features_no_grad(data_loader, feature_dimension, net):
     ptr = 0
     with torch.no_grad():
         for batch_idx, (imgs, pids_batch, camids_batch) in enumerate(data_loader):
-            input_imgs = Variable(imgs.float().cuda())
+            input_imgs = Variable(imgs.float().cuda().permute(0, 3, 1, 2).unsqueeze(-1))
             batch_num = input_imgs.size(0)
-            feature_pool, feature_cls = net(input_imgs, input_imgs,  modal=1)
+            feature_cls = net(input_imgs)
             features[ptr:ptr + batch_num, :] = feature_cls.detach().cpu().numpy()
             ptr += batch_num
             pids.extend(pids_batch)

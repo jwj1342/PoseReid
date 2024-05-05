@@ -49,7 +49,7 @@ if __name__ == '__main__':
     random_ir_pose = torch.randn(4, 12, 19, 6)
 
     feature_pool, feature_cls = pose_feature_net(random_rgb_pose, random_ir_pose)
-    print(pose_feature_net)
+    print(pose_feature_net, feature_cls)
     # with SummaryWriter(log_dir='../visual', comment='lstm') as writer:
     #     writer.add_graph(pose_feature_net, [random_rgb_pose, random_ir_pose])
 
